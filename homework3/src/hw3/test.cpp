@@ -4,6 +4,7 @@
 #include <chrono>
 #include <random>
 #include <iomanip>
+#include <algorithm> 
 
 using namespace std;
 using namespace chrono;
@@ -14,44 +15,49 @@ void QuickSortBestCase(vector<int>& data, int left, int right) {
 
     int mid = left + (right - left) / 2;
 
-    // 將這一區段的中位數，與最左邊（即 Pivot 位置）交換
-    swap(data[left], data[mid]);
-
-    // 遞迴處理左半邊與右半邊，確保下一層的第一個元素也是中位數
-    QuickSortBestCase(data, left + 1, mid);
+    QuickSortBestCase(data, left, mid - 1);
     QuickSortBestCase(data, mid + 1, right);
+    swap(data[left], data[mid]);
 }
 
 vector<int> getTestData(int n, string caseType, string algoName, mt19937& rng) {
-    vector<int> data(n + 1);
-    for (int i = 1; i <= n; i++) data[i] = i;
+    vector<int> data(n);
+    for (int i = 0; i < n; i++)
+        data[i] = i + 1; 
 
     if (caseType == "BEST") {
-        if (algoName == "Quick Sort") {
-            QuickSortBestCase(data, 1, n);
-        }
+        if (algoName == "Quick Sort") {     
+            QuickSortBestCase(data, 0, n - 1);
+        }     
         else {
             
         }
     }
     else if (caseType == "WORST") {
-        reverse(data.begin() + 1, data.end()); 
+        if (algoName == "Insertion Sort" || algoName == "Quick Sort") {
+            
+            reverse(data.begin(), data.end());
+        }
+        else {
+            reverse(data.begin(), data.end());
+        }
     }
     else if (caseType == "AVERAGE") {
-        shuffle(data.begin() + 1, data.end(), rng); 
+        
+        shuffle(data.begin(), data.end(), rng);
     }
     return data;
 }
 
 int main() {
     int n = 2; // 陣列大小
-    int numPermutations = 50; // 跑ㄉ次數
+    int numPermutations = 50; // 跑的次數
 
     while (n <= 3000)
     {
         random_device rd;
         mt19937 rng(rd());
-  
+
         cout << "==================================================================================================================" << endl;
         cout << "  結果 (n = " << n << ", 累積次數 = " << numPermutations << ")" << endl;
         cout << "==================================================================================================================" << endl;
@@ -61,14 +67,12 @@ int main() {
             << setw(32) << "Worst (ms / 次數)" << endl;
         cout << "------------------------------------------------------------------------------------------------------------------" << endl;
 
-        // 四種演算法清單，迴圈跑
         vector<string> algoNames = { "Insertion Sort", "Quick Sort", "Merge Sort", "Heap Sort" };
         vector<string> cases = { "BEST", "AVERAGE", "WORST" };
 
         for (string name : algoNames) {
             cout << left << setw(18) << name;
 
-            // 依序跑 Best, Average, Worst 三種情況
             for (string c : cases) {
                 double total_time = 0.0;
                 long long total_ops = 0;
@@ -76,7 +80,7 @@ int main() {
                 for (int p = 0; p < numPermutations; p++) {
                     vector<int> testData = getTestData(n, c, name, rng);
 
-                    // 清零
+                    // 清零計數器
                     ResetCounter();
 
                     // 開始計時
@@ -86,7 +90,7 @@ int main() {
                         InsertionSort(testData, n);
                     }
                     else if (name == "Quick Sort") {
-                        QuickSort(testData, 1, n);
+                        QuickSort(testData, 0, n - 1); 
                     }
                     else if (name == "Merge Sort") {
                         MergeSort(testData, n);
@@ -102,15 +106,18 @@ int main() {
                     total_time += elapsed.count();
                     total_ops += op_counter;
                 }
-   
+
                 char buffer[100];
-                snprintf(buffer, sizeof(buffer), "%.3f ms / %lld", total_time, total_ops);
+                snprintf(buffer, sizeof(buffer),
+                    "%.3f ms / %lld",
+                    total_time / numPermutations,
+                    total_ops / numPermutations);
                 cout << left << setw(32) << buffer;
             }
             cout << endl;
         }
         cout << "==================================================================================================================" << endl << endl;
-        n *= 10;
+        n *= 10; 
     }
     return 0;
 }
