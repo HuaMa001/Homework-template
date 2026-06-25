@@ -5,11 +5,12 @@
 #include <random>
 #include <iomanip>
 #include <algorithm> 
+#include <cmath>
 
 using namespace std;
 using namespace chrono;
 
-
+// Quick Sort 最佳情況的資料生成
 void QuickSortBestCase(vector<int>& data, int left, int right) {
     if (left >= right) return;
 
@@ -20,22 +21,22 @@ void QuickSortBestCase(vector<int>& data, int left, int right) {
     swap(data[left], data[mid]);
 }
 
+
 vector<int> getTestData(int n, string caseType, string algoName, mt19937& rng) {
     vector<int> data(n);
     for (int i = 0; i < n; i++)
-        data[i] = i + 1; 
+        data[i] = i + 1;
 
     if (caseType == "BEST") {
-        if (algoName == "Quick Sort") {     
+        if (algoName == "Quick Sort") {
             QuickSortBestCase(data, 0, n - 1);
-        }     
+        }
         else {
-            
+           
         }
     }
     else if (caseType == "WORST") {
         if (algoName == "Insertion Sort" || algoName == "Quick Sort") {
-            
             reverse(data.begin(), data.end());
         }
         else {
@@ -43,17 +44,31 @@ vector<int> getTestData(int n, string caseType, string algoName, mt19937& rng) {
         }
     }
     else if (caseType == "AVERAGE") {
-        
         shuffle(data.begin(), data.end(), rng);
     }
     return data;
 }
 
-int main() {
-    int n = 2; // 陣列大小
-    int numPermutations = 50; // 跑的次數
+// 排序演算法 
+void SmartSort(vector<int>& data, int n) {
+    if (n <= 20) {
+        InsertionSort(data, n);
+    }
+    else if (n < 3000) {
+        QuickSort(data, 0, n - 1);
+    }
+    else {
+        HeapSort(data, n);
+    }
+}
 
-    while (n <= 3000)
+int main() {
+    int numPermutations = 10; // 執行次數
+
+ 
+    vector<int> n_sizes = { 500, 1000, 2000, 3000, 4000, 5000 };
+
+    for (int n : n_sizes)
     {
         random_device rd;
         mt19937 rng(rd());
@@ -67,13 +82,20 @@ int main() {
             << setw(32) << "Worst (ms / 次數)" << endl;
         cout << "------------------------------------------------------------------------------------------------------------------" << endl;
 
-        vector<string> algoNames = { "Insertion Sort", "Quick Sort", "Merge Sort", "Heap Sort" };
+        
+        vector<string> algoNames = { "Insertion Sort", "Quick Sort", "Merge Sort", "Heap Sort", "Smart Sort" };
         vector<string> cases = { "BEST", "AVERAGE", "WORST" };
 
         for (string name : algoNames) {
             cout << left << setw(18) << name;
 
             for (string c : cases) {
+                // 當 n >= 3000 為 Quick Sort 時跳過，因為會系統崩潰
+                if (name == "Quick Sort" && c == "WORST" && n >= 3000) {
+                    cout << left << setw(32) << "Skip (Stack Overflow)";
+                    continue;
+                }
+
                 double total_time = 0.0;
                 long long total_ops = 0;
 
@@ -86,17 +108,21 @@ int main() {
                     // 開始計時
                     auto start = high_resolution_clock::now();
 
+                    
                     if (name == "Insertion Sort") {
                         InsertionSort(testData, n);
                     }
                     else if (name == "Quick Sort") {
-                        QuickSort(testData, 0, n - 1); 
+                        QuickSort(testData, 0, n - 1);
                     }
                     else if (name == "Merge Sort") {
                         MergeSort(testData, n);
                     }
                     else if (name == "Heap Sort") {
                         HeapSort(testData, n);
+                    }
+                    else if (name == "Smart Sort") {
+                        SmartSort(testData, n);
                     }
 
                     // 結束計時
@@ -117,7 +143,6 @@ int main() {
             cout << endl;
         }
         cout << "==================================================================================================================" << endl << endl;
-        n *= 10; 
     }
     return 0;
 }

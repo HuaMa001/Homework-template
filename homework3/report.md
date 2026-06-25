@@ -4,14 +4,14 @@
 
 ## 解題說明
 
-使用四種排序演算法（**Insertion Sort 插入排序**、**Quick Sort 快速排序**、**Merge Sort 合併排序**、**Heap Sort 堆積排序**）在不同資料規模（$n = 2, 20, 200, 2000$）下，**Best Case 最佳情況**、**Average Case 平均情況**、**Worst Case 最壞情況**的實際表現。
+使用四種排序演算法（**Insertion Sort 插入排序**、**Quick Sort 快速排序**、**Merge Sort 合併排序**、**Heap Sort 堆積排序**）在不同資料規模（$n = 500, 1000, 2000, 3000, 4000,5000$）下，**Best Case 最佳情況**、**Average Case 平均情況**、**Worst Case 最壞情況**的實際表現。
 
 計算：
 
 1. **硬體開銷（時間，單位為 ms）**：利用 `<chrono>` 測量 CPU 執行的時間。
 2. **步驟數量 (次數，單位為 count）**：在各演算法的程式碼中增加全域計數器 `op_counter`，計算操作次數。
 
-實驗重複執行 50 次（`numPermutations = 50`）的方式計算。
+實驗重複執行 10 次（`numPermutations = 50`）的方式計算。
 
 ---
 
@@ -186,11 +186,12 @@ void MergeSort(vector<int>& a, int n) {
 #include <random>
 #include <iomanip>
 #include <algorithm> 
+#include <cmath>
 
 using namespace std;
 using namespace chrono;
 
-
+// Quick Sort 最佳情況的資料生成
 void QuickSortBestCase(vector<int>& data, int left, int right) {
     if (left >= right) return;
 
@@ -201,22 +202,22 @@ void QuickSortBestCase(vector<int>& data, int left, int right) {
     swap(data[left], data[mid]);
 }
 
+
 vector<int> getTestData(int n, string caseType, string algoName, mt19937& rng) {
     vector<int> data(n);
     for (int i = 0; i < n; i++)
-        data[i] = i + 1; 
+        data[i] = i + 1;
 
     if (caseType == "BEST") {
         if (algoName == "Quick Sort") {
             QuickSortBestCase(data, 0, n - 1);
-        }     
+        }
         else {
-            
+           
         }
     }
     else if (caseType == "WORST") {
         if (algoName == "Insertion Sort" || algoName == "Quick Sort") {
-            
             reverse(data.begin(), data.end());
         }
         else {
@@ -224,17 +225,31 @@ vector<int> getTestData(int n, string caseType, string algoName, mt19937& rng) {
         }
     }
     else if (caseType == "AVERAGE") {
-        
         shuffle(data.begin(), data.end(), rng);
     }
     return data;
 }
 
-int main() {
-    int n = 2; // 陣列大小
-    int numPermutations = 50; // 跑的次數
+// 排序演算法 
+void SmartSort(vector<int>& data, int n) {
+    if (n <= 20) {
+        InsertionSort(data, n);
+    }
+    else if (n < 3000) {
+        QuickSort(data, 0, n - 1);
+    }
+    else {
+        HeapSort(data, n);
+    }
+}
 
-    while (n <= 3000)
+int main() {
+    int numPermutations = 10; // 執行次數
+
+ 
+    vector<int> n_sizes = { 500, 1000, 2000, 3000, 4000, 5000 };
+
+    for (int n : n_sizes)
     {
         random_device rd;
         mt19937 rng(rd());
@@ -248,13 +263,20 @@ int main() {
             << setw(32) << "Worst (ms / 次數)" << endl;
         cout << "------------------------------------------------------------------------------------------------------------------" << endl;
 
-        vector<string> algoNames = { "Insertion Sort", "Quick Sort", "Merge Sort", "Heap Sort" };
+        
+        vector<string> algoNames = { "Insertion Sort", "Quick Sort", "Merge Sort", "Heap Sort", "Smart Sort" };
         vector<string> cases = { "BEST", "AVERAGE", "WORST" };
 
         for (string name : algoNames) {
             cout << left << setw(18) << name;
 
             for (string c : cases) {
+                // 當 n >= 3000 為 Quick Sort 時跳過，因為會系統崩潰
+                if (name == "Quick Sort" && c == "WORST" && n >= 3000) {
+                    cout << left << setw(32) << "Skip (Stack Overflow)";
+                    continue;
+                }
+
                 double total_time = 0.0;
                 long long total_ops = 0;
 
@@ -267,18 +289,21 @@ int main() {
                     // 開始計時
                     auto start = high_resolution_clock::now();
 
-                   
+                    
                     if (name == "Insertion Sort") {
                         InsertionSort(testData, n);
                     }
                     else if (name == "Quick Sort") {
-                        QuickSort(testData, 0, n - 1); 
+                        QuickSort(testData, 0, n - 1);
                     }
                     else if (name == "Merge Sort") {
                         MergeSort(testData, n);
                     }
                     else if (name == "Heap Sort") {
                         HeapSort(testData, n);
+                    }
+                    else if (name == "Smart Sort") {
+                        SmartSort(testData, n);
                     }
 
                     // 結束計時
@@ -299,7 +324,6 @@ int main() {
             cout << endl;
         }
         cout << "==================================================================================================================" << endl << endl;
-        n *= 10; 
     }
     return 0;
 }
@@ -312,164 +336,69 @@ int main() {
 
 ## 效能分析
 
-針對四種排序演算法（Insertion Sort、Quick Sort、Merge Sort、Heap Sort）進行測試，並比較其理論時間複雜度（Big-O）與實際執行結果。
+針對四種排序演算法（Insertion Sort、Quick Sort、Merge Sort、Heap Sort）與自己寫得Smart Sort進行測試，並比較其理論時間複雜度（Big-O）與實際執行結果。
+## 理論複雜度與實際結果比較
+### 各演算法理論複雜度
+
+| 演算法            | Best Case  | Average Case | Worst Case |
+| -------------- | ---------- | ------------ | ---------- |
+| Insertion Sort | O(n)       | O(n²)        | O(n²)      |
+| Quick Sort     | O(n log n) | O(n log n)   | O(n²)      |
+| Merge Sort     | O(n log n) | O(n log n)   | O(n log n) |
+| Heap Sort      | O(n log n) | O(n log n)   | O(n log n) |
+| Smart Sort     | O(n log n) | O(n log n)   | O(n log n) |
 
 ---
 
-### 1. Insertion Sort（插入排序）
+### 實際測試結果（n = 5000）
 
-| 情況 | 理論複雜度 |
-|------|-----------|
-| Best Case | O(n) |
-| Average Case | O(n²) |
-| Worst Case | O(n²) |
-
-Insertion Sort 在資料接近排序完成時表現最佳，只需少量比較與移動。
-
-從實驗結果（n = 2000）可觀察：
-
-- Best：0.025 ms / 1999 次
-- Average：10.731 ms / 1,001,953 次
-- Worst：20.208 ms / 1,999,000 次
-
-可以明顯看出：
-
-- Best Case 操作次數接近 O(n)
-- Average 與 Worst Case 操作次數快速增加，呈現平方級成長
-
-這驗證了 Insertion Sort 在資料量變大時效率會迅速下降，特別是反序排列時，效能最差。
+| 演算法            | Best (ms / 次數) | Average (ms / 次數)  | Worst (ms / 次數)      |
+| -------------- | -------------- | ------------------ | -------------------- |
+| Insertion Sort | 0.083 / 4,999  | 68.622 / 6,245,922 | 135.166 / 12,497,500 |
+| Quick Sort     | 0.215 / 57,726 | **0.597 / 77,203** | Stack Overflow       |
+| Merge Sort     | 0.716 / 70,000 | 1.087 / 70,000     | 0.663 / 70,000       |
+| Heap Sort      | 1.299 / 56,093 | 1.285 / 53,846     | 1.169 / 51,632       |
+| Smart Sort     | 1.268 / 56,093 | 1.353 / 53,848     | 1.176 / 51,632       |
 
 ---
 
-### 2. Quick Sort（快速排序）
+##  理論與實驗結果分析
 
-| 情況 | 理論複雜度 |
-|------|-----------|
-| Best Case | O(n log n) |
-| Average Case | O(n log n) |
-| Worst Case | O(n²) |
-
-Quick Sort 在大多數情況下表現良好，但 Pivot 選擇會嚴重影響效能。
-
-### 實驗結果（n = 2000）：
-
-- Best：0.139 ms / 20,010 次
-- Average：0.240 ms / 27,437 次
-- Worst：5.503 ms / 2,002,998 次
-
-### 分析：
-
-- Best 與 Average 差異小，表示分割大致均勻
-- Worst Case 操作次數大幅增加，接近 O(n²)
-- 代表 Pivot 在 Worst Case 造成分割不均勻
+| 演算法            | 理論預期                   | 實驗結果分析                                                                                  |
+| -------------- | ---------------------- | --------------------------------------------------------------------------------------- |
+| Insertion Sort | O(n) ~ O(n²)           | Best Case 僅 4,999 次操作，但 Worst Case 達 12,497,500 次，操作次數平方成長，符合 O(n²) 特性。               |
+| Quick Sort     | 平均 O(n log n)，最差 O(n²) | Average Case 僅需 0.597 ms，為所有演算法中最快；但 n ≥ 3000 時 Worst Case 發生 Stack Overflow，驗證其最差情況缺陷。 |
+| Merge Sort     | 全部 O(n log n)          | 三種情況操作次數皆固定為 70,000 次，不受資料排列影響，符合穩定 O(n log n) 特性。                                      |
+| Heap Sort      | 全部 O(n log n)          | 執行時間維持約 1 ms 左右，不會因資料排列不同而產生劇烈變化。                                                       |
+| Smart Sort     | 全部 O(n log n)          | n ≤ 2000 時與 Quick Sort 行為相似；n ≥ 3000 時切換為 Heap Sort，因此避免 Stack Overflow。                |
 
 ---
 
-### 3. Merge Sort（合併排序）
+## 4.3 各演算法特性比較
 
-| 情況 | 理論複雜度 |
-|------|-----------|
-| Best Case | O(n log n) |
-| Average Case | O(n log n) |
-| Worst Case | O(n log n) |
-
-Merge Sort 的特點是**穩定且不受資料排列影響**。
-
-### 實驗結果（n = 2000）：
-
-- Best：0.218 ms / 24,000 次
-- Average：0.372 ms / 24,000 次
-- Worst：0.234 ms / 24,000 次
-
-### 分析：
-
-- 三種情況操作次數幾乎完全一致
-- stable排序法
-- 完全符合 O(n log n) 穩定特性
+| 演算法            | 優點          | 缺點                      |
+| -------------- | ----------- | ----------------------- |
+| Insertion Sort | 小資料效率高、實作簡單 | 大資料效率差                  |
+| Quick Sort     | 平均效能最佳      | 最差情況可能發生 Stack Overflow |
+| Merge Sort     | 穩定排序、效能穩定   | 需額外記憶體空間                |
+| Heap Sort      | 穩定且不易退化     | 平均速度略慢於 Quick Sort      |
+| Smart Sort     | 同時兼顧速度與穩定性  | 實作較複雜                   |
 
 ---
 
-### 4. Heap Sort（堆積排序）
+## 4.4 結論
 
-| 情況 | 理論複雜度 |
-|------|-----------|
-| Best Case | O(n log n) |
-| Average Case | O(n log n) |
-| Worst Case | O(n log n) |
+根據理論分析與實際測試結果可發現：
 
-Heap Sort MAX-heap二元樹實作。
+1. **Insertion Sort** 在接近排序完成的資料中表現最佳，但資料量增加後會呈現 O(n²) 的效能下降。
+2. **Quick Sort** 在平均情況下速度最快，n = 5000 時僅需 0.597 ms，但在最差情況下會因遞迴過深而發生 Stack Overflow。
+3. **Merge Sort** 的操作次數固定，效能最穩定，完全符合 O(n log n) 理論分析。
+4. **Heap Sort** 雖然速度略慢於 Quick Sort，但能穩定維持 O(n log n) 效能且不會發生遞迴溢位。
+5. **Smart Sort** 在一般情況下保有 Quick Sort 的高效率，在最差情況下則切換為 Heap Sort，因此兼具速度與穩定性。
 
-### 實驗結果（n = 2000）：
-
-- Best：0.414 ms / 19,595 次
-- Average：0.456 ms / 18,855 次
-- Worst：0.386 ms / 17,993 次
-
-### 分析：
-
-- 三種情況差異極小
-- 操作次數穩定維持在 O(n log n) 範圍
-- 但整體執行時間略高於 Quick Sort
-
----
-
-### 綜合比較分析
-
-從實驗結果可歸納以下重點：
+綜合本次實驗結果，若僅考慮執行速度，Quick Sort 為最佳選擇；若同時考量效能、穩定性與可靠性，則 Smart Sort 為較適合作為通用排序演算法的方案。
 
 
-### 1. Insertion Sort
-
-- 小資料量表現尚可
-- n 增加後呈現 O(n²) 成長
-- 不適合大規模資料
-
----
-
-### 2. Quick Sort
-
-- 平均效能最佳
-- 適合大多數情境
-- Worst Case 會退化為 O(n²)
-
----
-
-### 3. Merge Sort
-
-- 最穩定排序演算法
-- 永遠維持 O(n log n)
-- 但需要額外記憶體空間
-
----
-
-### 4. Heap Sort
-
-- 時間複雜度穩定
-- 不需額外大記憶體
-
----
-
-### 不同資料(N)選擇
-
-| 資料規模 | 建議排序法 |
-|----------|------------|
-| n < 50 | Insertion Sort |
-| 50 ~ 1000 | Quick Sort |
-| n > 1000 | Quick / Merge Sort |
-| 需要穩定排序 | Merge Sort |
-| 記憶體受限 | Heap Sort |
-
----
-
-### 總結
-
-本次結果驗證以下結論：
-
-- O(n²) 演算法（Insertion Sort）在大資料量下效率明顯下降
-- O(n log n) 演算法（Quick / Merge / Heap）在大資料量仍保持良好效能
-- Quick Sort 平均最快，但最壞情況不穩定
-- Merge Sort 最穩定，但需要額外記憶體
-- Heap Sort 在空間效率與穩定性間取得平衡
 
 
 
@@ -479,107 +408,124 @@ Heap Sort MAX-heap二元樹實作。
 以下為實驗程式碼編譯後的完整輸出結果：
 ```text
 ==================================================================================================================
-  結果 (n = 2, 累積次數 = 50)
+  結果 (n = 500, 累積次數 = 10)
 ==================================================================================================================
 演算法名稱        Best (ms / 次數)                Average (ms / 次數)             Worst (ms / 次數)
 ------------------------------------------------------------------------------------------------------------------
-Insertion Sort    0.000 ms / 1                    0.000 ms / 1                    0.000 ms / 1
-Quick Sort        0.000 ms / 3                    0.000 ms / 3                    0.000 ms / 3
-Merge Sort        0.001 ms / 4                    0.001 ms / 4                    0.001 ms / 4
-Heap Sort         0.000 ms / 1                    0.000 ms / 1                    0.000 ms / 1
+Insertion Sort    0.008 ms / 499                  0.683 ms / 61882                1.464 ms / 124750
+Quick Sort        0.023 ms / 4008                 0.053 ms / 5534                 0.442 ms / 125748
+Merge Sort        0.051 ms / 5000                 0.080 ms / 5000                 0.051 ms / 5000
+Heap Sort         0.097 ms / 3896                 0.102 ms / 3717                 0.094 ms / 3514
+Smart Sort        0.344 ms / 125748               0.048 ms / 5302                 0.326 ms / 125748
 ==================================================================================================================
 
 ==================================================================================================================
-  結果 (n = 20, 累積次數 = 50)
+  結果 (n = 1000, 累積次數 = 10)
 ==================================================================================================================
 演算法名稱        Best (ms / 次數)                Average (ms / 次數)             Worst (ms / 次數)
 ------------------------------------------------------------------------------------------------------------------
-Insertion Sort    0.000 ms / 19                   0.002 ms / 109                  0.003 ms / 190
-Quick Sort        0.001 ms / 78                   0.001 ms / 96                   0.001 ms / 228
-Merge Sort        0.002 ms / 120                  0.003 ms / 120                  0.003 ms / 120
-Heap Sort         0.003 ms / 63                   0.003 ms / 59                   0.002 ms / 54
+Insertion Sort    0.015 ms / 999                  3.013 ms / 248433               5.759 ms / 499500
+Quick Sort        0.070 ms / 9009                 0.134 ms / 12360                1.341 ms / 501498
+Merge Sort        0.105 ms / 10000                0.172 ms / 10000                0.106 ms / 10000
+Heap Sort         0.217 ms / 8813                 0.275 ms / 8434                 0.233 ms / 7991
+Smart Sort        1.571 ms / 501498               0.123 ms / 12455                1.500 ms / 501498
 ==================================================================================================================
 
 ==================================================================================================================
-  結果 (n = 200, 累積次數 = 50)
+  結果 (n = 2000, 累積次數 = 10)
 ==================================================================================================================
 演算法名稱        Best (ms / 次數)                Average (ms / 次數)             Worst (ms / 次數)
 ------------------------------------------------------------------------------------------------------------------
-Insertion Sort    0.003 ms / 199                  0.096 ms / 10066                0.208 ms / 19900
-Quick Sort        0.007 ms / 1407                 0.017 ms / 1863                 0.057 ms / 20298
-Merge Sort        0.017 ms / 1600                 0.026 ms / 1600                 0.028 ms / 1600
-Heap Sort         0.030 ms / 1296                 0.035 ms / 1231                 0.027 ms / 1146
+Insertion Sort    0.030 ms / 1999                 13.117 ms / 989652              27.697 ms / 1999000
+Quick Sort        0.175 ms / 20010                0.280 ms / 27294                5.965 ms / 2002998
+Merge Sort        0.442 ms / 24000                0.567 ms / 24000                0.404 ms / 24000
+Heap Sort         0.716 ms / 19595                0.496 ms / 18856                0.555 ms / 17993
+Smart Sort        5.776 ms / 2002998              0.250 ms / 27505                5.747 ms / 2002998
 ==================================================================================================================
 
 ==================================================================================================================
-  結果 (n = 2000, 累積次數 = 50)
+  結果 (n = 3000, 累積次數 = 10)
 ==================================================================================================================
 演算法名稱        Best (ms / 次數)                Average (ms / 次數)             Worst (ms / 次數)
 ------------------------------------------------------------------------------------------------------------------
-Insertion Sort    0.025 ms / 1999                 10.731 ms / 1001953             20.208 ms / 1999000
-Quick Sort        0.139 ms / 20010                0.240 ms / 27437                5.503 ms / 2002998
-Merge Sort        0.218 ms / 24000                0.372 ms / 24000                0.234 ms / 24000
-Heap Sort         0.414 ms / 19595                0.456 ms / 18855                0.386 ms / 17993
+Insertion Sort    0.042 ms / 2999                 27.860 ms / 2260786             53.880 ms / 4498500
+Quick Sort        0.137 ms / 32869                0.365 ms / 44394                Skip (Stack Overflow)
+Merge Sort        0.357 ms / 36000                0.595 ms / 36000                0.371 ms / 36000
+Heap Sort         0.726 ms / 31459                0.795 ms / 30123                0.694 ms / 28780
+Smart Sort        0.756 ms / 31459                0.746 ms / 30124                0.729 ms / 28780
+==================================================================================================================
+
+==================================================================================================================
+  結果 (n = 4000, 累積次數 = 10)
+==================================================================================================================
+演算法名稱        Best (ms / 次數)                Average (ms / 次數)             Worst (ms / 次數)
+------------------------------------------------------------------------------------------------------------------
+Insertion Sort    0.061 ms / 3999                 43.513 ms / 3992151             86.604 ms / 7998000
+Quick Sort        0.174 ms / 44011                0.520 ms / 61401                Skip (Stack Overflow)
+Merge Sort        0.494 ms / 48000                0.803 ms / 48000                0.492 ms / 48000
+Heap Sort         0.993 ms / 43308                1.045 ms / 41713                0.947 ms / 40088
+Smart Sort        0.965 ms / 43308                1.000 ms / 41716                0.991 ms / 40088
+==================================================================================================================
+
+==================================================================================================================
+  結果 (n = 5000, 累積次數 = 10)
+==================================================================================================================
+演算法名稱        Best (ms / 次數)                Average (ms / 次數)             Worst (ms / 次數)
+------------------------------------------------------------------------------------------------------------------
+Insertion Sort    0.083 ms / 4999                 68.622 ms / 6245922             135.166 ms / 12497500
+Quick Sort        0.215 ms / 57726                0.597 ms / 77203                Skip (Stack Overflow)
+Merge Sort        0.716 ms / 70000                1.087 ms / 70000                0.663 ms / 70000
+Heap Sort         1.299 ms / 56093                1.285 ms / 53846                1.169 ms / 51632
+Smart Sort        1.268 ms / 56093                1.353 ms / 53848                1.176 ms / 51632
 ==================================================================================================================
 
 ```
 
 ## 申論及開發報告
 
-在本次實作中，四種排序演算法皆在不同資料規模（n = 2, 20, 200, 2000）下進行測試，並觀察其時間與操作次數變化。
-
-整體結果大致符合 Big-O 理論分析，但在實際執行過程中，也出現部分系統限制。
+本次實驗比較 Insertion Sort、Quick Sort、Merge Sort、Heap Sort 與 Smart Sort 在 n = 500～5000 的效能表現，並分析時間與操作次數變化。
 
 ---
 
-### Quick Sort 記憶體與遞迴深度問題
+### 實驗重點觀察
 
-當資料規模增加至 n ≥ 3000 時，Quick Sort 出現遞迴深度過深的問題，導致系統記憶體壓力上升，甚至無法完成完整測試。
+- **Insertion Sort**
+  - 小資料（n=500）表現最佳（0.008 ms）
+  - 隨資料量增加迅速退化為 O(n²)，n=5000 時達 135 ms
 
-其原因如下：
+- **Quick Sort（重點問題）**
+  - 平均效能最佳（n=5000 約 0.597 ms）
+  - 操作次數隨 n 增加成長快速
+  - **嚴重問題：Worst Case 不穩定**
+    - n ≥ 3000 時出現 **Stack Overflow**
+    - 原因為 pivot 選擇不佳導致遞迴深度退化為 O(n)
+  - 結論：**速度快，但最差情況存在系統性風險**
 
-- Quick Sort 為遞迴式
-- 在最壞情況下（Worst Case），遞迴深度會退化為 O(n)
-- 若 pivot 選擇不佳且在資料量較大時，系統呼叫堆疊（stack）快速增加
+- **Merge Sort**
+  - 所有情況皆穩定（約 0.7～1.1 ms）
+  - 操作次數固定（70,000 次）
+  - 不受資料分布影響，符合 O(n log n)
 
-因此在 n ≥ 3000 時，實際執行會出現：
-- 遞迴呼叫過深
-- 記憶體不足或執行終止的情況
+- **Heap Sort**
+  - 效能穩定（約 1.1～1.3 ms）
+  - 不受資料排列影響
+  - 無遞迴問題，不會發生 Stack Overflow
 
----
-
-### 其他演算法穩定性分析
-
-相較之下：
-
-- Merge Sort：遞迴深度固定為 O(log n)，記憶體穩定
-- Heap Sort：非遞迴式結構，不受 stack 深度影響
-- Insertion Sort：雖為 O(n²)，但不涉及遞迴，因此不會有記憶體問題
-
----
-
-### 開發與實作觀察
-
-在實作過程中，本實驗採用：
-
-- `chrono` 進行時間測量
-- 全域變數 `op_counter` 計算操作次數
-- `mt19937` 產生隨機測資
-- 重複執行 50 次取平均值以降低誤差
-
-透過上述設計，可以較準確反映不同排序演算法在各種資料分布下的實際效能。
+- **Smart Sort**
+  - 小資料行為類似 Quick Sort
+  - 大資料自動切換 Heap Sort
+  - 可避免 Quick Sort 崩潰問題，兼具速度與穩定性
 
 ---
 
-### 結論補充
+### 結論
 
-雖然 Quick Sort 在平均情況下擁有最佳效能，但實驗結果顯示其對 pivot 選擇非常敏感。
-
-因此在實務應用中：
-
-- 若資料規模較小或可控 → Quick Sort 最佳
-- 若資料規模極大或要求穩定 → Merge Sort 或 Heap Sort 較適合
-- 若資料接近排序完成 → Insertion Sort 仍具優勢
+- **最快平均效能：Quick Sort**
+- **但 Quick Sort 最大問題：Worst Case 會發生 Stack Overflow（不可靠）**
+- **最穩定：Merge Sort**
+- **最安全（無遞迴風險）：Heap Sort / Smart Sort**
+- **小資料最佳：Insertion Sort**
+- **整體最均衡：Smart Sort**
 
 
 ---
